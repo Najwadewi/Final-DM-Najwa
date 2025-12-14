@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.impute import SimpleImputer
 
 # ===============================
 # PAGE CONFIG
@@ -15,12 +17,11 @@ st.set_page_config(
 )
 
 # ===============================
-# LOAD MODELS & PREPROCESSOR
+# LOAD MODELS
 # ===============================
 rf_model = joblib.load("rf_vending_model.pkl")
 nb_model = joblib.load("nb_vending_model.pkl")
 le = joblib.load("label_encoder.pkl")
-imputer = joblib.load("imputer.pkl")
 
 # ===============================
 # LOAD DATASET
@@ -33,10 +34,13 @@ features = [
 ]
 
 # ===============================
-# PREPROCESSING (WAJIB)
+# PREPROCESSING (IMPUTER LANGSUNG)
 # ===============================
-X_raw = df[features]              # data masih ada NaN
-X = imputer.transform(X_raw)      # data sudah bersih
+imputer = SimpleImputer(strategy="mean")
+imputer.fit(df[features])     # fit dari dataset
+
+X_raw = df[features]
+X = imputer.transform(X_raw)  # data bersih (tanpa NaN)
 y = le.transform(df["Category"])
 
 # ===============================
@@ -66,8 +70,10 @@ with tab1:
         rf_transtotal = st.number_input("Transaction Total", 0.0, key="rf_transtotal")
 
     if st.button("Prediksi (Random Forest)"):
-        rf_input_raw = np.array([[rf_rprice, rf_rqty, rf_mprice,
-                                  rf_mqty, rf_linetotal, rf_transtotal]])
+        rf_input_raw = np.array([[
+            rf_rprice, rf_rqty, rf_mprice,
+            rf_mqty, rf_linetotal, rf_transtotal
+        ]])
         rf_input = imputer.transform(rf_input_raw)
         rf_pred = rf_model.predict(rf_input)
         rf_category = le.inverse_transform(rf_pred)
@@ -113,8 +119,10 @@ with tab2:
         nb_transtotal = st.number_input("Transaction Total", 0.0, key="nb_transtotal")
 
     if st.button("Prediksi (Naive Bayes)"):
-        nb_input_raw = np.array([[nb_rprice, nb_rqty, nb_mprice,
-                                  nb_mqty, nb_linetotal, nb_transtotal]])
+        nb_input_raw = np.array([[
+            nb_rprice, nb_rqty, nb_mprice,
+            nb_mqty, nb_linetotal, nb_transtotal
+        ]])
         nb_input = imputer.transform(nb_input_raw)
         nb_pred = nb_model.predict(nb_input)
         nb_category = le.inverse_transform(nb_pred)
