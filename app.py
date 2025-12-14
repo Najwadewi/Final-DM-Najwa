@@ -15,12 +15,16 @@ st.set_page_config(
 )
 
 # ===============================
-# LOAD MODELS & DATA
+# LOAD MODELS & PREPROCESSOR
 # ===============================
 rf_model = joblib.load("rf_vending_model.pkl")
 nb_model = joblib.load("nb_vending_model.pkl")
 le = joblib.load("label_encoder.pkl")
+imputer = joblib.load("imputer.pkl")
 
+# ===============================
+# LOAD DATASET
+# ===============================
 df = pd.read_csv("vending_machine_sales.csv")
 
 features = [
@@ -28,14 +32,18 @@ features = [
     "LineTotal", "TransTotal"
 ]
 
-X = df[features]
+# ===============================
+# PREPROCESSING (WAJIB)
+# ===============================
+X_raw = df[features]              # data masih ada NaN
+X = imputer.transform(X_raw)      # data sudah bersih
 y = le.transform(df["Category"])
 
 # ===============================
 # HEADER
 # ===============================
 st.title("🎯 Klasifikasi Produk Vending Machine")
-st.caption("Perbandingan Algoritma Random Forest & Naive Bayes")
+st.caption("Perbandingan Algoritma Random Forest dan Naive Bayes")
 
 tab1, tab2 = st.tabs(["🌲 Random Forest", "📊 Naive Bayes"])
 
@@ -48,20 +56,23 @@ with tab1:
     col1, col2 = st.columns(2)
 
     with col1:
-        rprice = st.number_input("RPrice", 0.0, key="rf_rprice")
-        rqty = st.number_input("RQty", 0, key="rf_rqty")
-        mprice = st.number_input("MPrice", 0.0, key="rf_mprice")
+        rf_rprice = st.number_input("RPrice", 0.0, key="rf_rprice")
+        rf_rqty = st.number_input("RQty", 0, key="rf_rqty")
+        rf_mprice = st.number_input("MPrice", 0.0, key="rf_mprice")
 
     with col2:
-        mqty = st.number_input("MQty", 0, key="rf_mqty")
-        linetotal = st.number_input("Line Total", 0.0, key="rf_linetotal")
-        transtotal = st.number_input("Transaction Total", 0.0, key="rf_transtotal")
+        rf_mqty = st.number_input("MQty", 0, key="rf_mqty")
+        rf_linetotal = st.number_input("Line Total", 0.0, key="rf_linetotal")
+        rf_transtotal = st.number_input("Transaction Total", 0.0, key="rf_transtotal")
 
     if st.button("Prediksi (Random Forest)"):
-        data = np.array([[rprice, rqty, mprice, mqty, linetotal, transtotal]])
-        pred = rf_model.predict(data)
-        category = le.inverse_transform(pred)
-        st.success(f"Hasil Prediksi: **{category[0]}**")
+        rf_input_raw = np.array([[rf_rprice, rf_rqty, rf_mprice,
+                                  rf_mqty, rf_linetotal, rf_transtotal]])
+        rf_input = imputer.transform(rf_input_raw)
+        rf_pred = rf_model.predict(rf_input)
+        rf_category = le.inverse_transform(rf_pred)
+
+        st.success(f"Hasil Prediksi: **{rf_category[0]}**")
 
     st.markdown("---")
     st.subheader("📊 Evaluasi Random Forest")
@@ -92,20 +103,23 @@ with tab2:
     col3, col4 = st.columns(2)
 
     with col3:
-        rprice_nb = st.number_input("RPrice", 0.0, key="nb_rprice")
-        rqty_nb = st.number_input("RQty", 0, key="nb_rqty")
-        mprice_nb = st.number_input("MPrice", 0.0, key="nb_mprice")
+        nb_rprice = st.number_input("RPrice", 0.0, key="nb_rprice")
+        nb_rqty = st.number_input("RQty", 0, key="nb_rqty")
+        nb_mprice = st.number_input("MPrice", 0.0, key="nb_mprice")
 
     with col4:
-        mqty_nb = st.number_input("MQty", 0, key="nb_mqty")
-        linetotal_nb = st.number_input("Line Total", 0.0, key="nb_linetotal")
-        transtotal_nb = st.number_input("Transaction Total", 0.0, key="nb_transtotal")
+        nb_mqty = st.number_input("MQty", 0, key="nb_mqty")
+        nb_linetotal = st.number_input("Line Total", 0.0, key="nb_linetotal")
+        nb_transtotal = st.number_input("Transaction Total", 0.0, key="nb_transtotal")
 
     if st.button("Prediksi (Naive Bayes)"):
-        data_nb = np.array([[rprice_nb, rqty_nb, mprice_nb, mqty_nb, linetotal_nb, transtotal_nb]])
-        pred_nb = nb_model.predict(data_nb)
-        category_nb = le.inverse_transform(pred_nb)
-        st.success(f"Hasil Prediksi: **{category_nb[0]}**")
+        nb_input_raw = np.array([[nb_rprice, nb_rqty, nb_mprice,
+                                  nb_mqty, nb_linetotal, nb_transtotal]])
+        nb_input = imputer.transform(nb_input_raw)
+        nb_pred = nb_model.predict(nb_input)
+        nb_category = le.inverse_transform(nb_pred)
+
+        st.success(f"Hasil Prediksi: **{nb_category[0]}**")
 
     st.markdown("---")
     st.subheader("📊 Evaluasi Naive Bayes")
