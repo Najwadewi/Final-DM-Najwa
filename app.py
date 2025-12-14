@@ -7,97 +7,123 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 # ===============================
-# LOAD MODEL & DATA
+# CONFIG
 # ===============================
-model = joblib.load('rf_vending_model.pkl')
-le = joblib.load('label_encoder.pkl')
+st.set_page_config(
+    page_title="Vending Machine Data Mining",
+    layout="wide"
+)
 
-# Load dataset (untuk visualisasi)
-df = pd.read_csv('vending_machine_sales.csv')
+# ===============================
+# LOAD FILES
+# ===============================
+clf_model = joblib.load("rf_vending_model.pkl")      # klasifikasi
+reg_model = joblib.load("rf_regression_model.pkl")   # regresi
+le = joblib.load("label_encoder.pkl")
 
-features = [
-    'RPrice', 'RQty', 'MPrice', 'MQty',
-    'LineTotal', 'TransTotal'
+df = pd.read_csv("vending_machine_sales.csv")
+
+features_clf = [
+    "RPrice", "RQty", "MPrice", "MQty",
+    "LineTotal", "TransTotal"
 ]
 
-X = df[features]
-y = le.transform(df['Category'])
+features_reg = [
+    "RPrice", "RQty", "MPrice", "MQty",
+    "LineTotal"
+]
+
+X = df[features_clf]
+y = le.transform(df["Category"])
 
 # ===============================
-# STREAMLIT UI
+# UI HEADER
 # ===============================
-st.set_page_config(page_title="Vending Machine Classification", layout="wide")
+st.title("🎯 Klasifikasi & Regresi Produk Vending Machine")
+st.caption("Algoritma: Random Forest (Ensemble Method)")
 
-st.title("🎯 Klasifikasi Produk Vending Machine")
-st.markdown("**Algoritma:** Random Forest (Ensemble Method)")
+tab1, tab2 = st.tabs(["📊 Klasifikasi", "📈 Regresi"])
 
-# ===============================
-# SIDEBAR INPUT
-# ===============================
-st.sidebar.header("📝 Input Data Transaksi")
+# ======================================================
+# TAB 1 — KLASIFIKASI
+# ======================================================
+with tab1:
+    st.subheader("🔮 Prediksi Kategori Produk")
 
-RPrice = st.sidebar.number_input("RPrice", 0.0)
-RQty = st.sidebar.number_input("RQty", 0)
-MPrice = st.sidebar.number_input("MPrice", 0.0)
-MQty = st.sidebar.number_input("MQty", 0)
-LineTotal = st.sidebar.number_input("Line Total", 0.0)
-TransTotal = st.sidebar.number_input("Transaction Total", 0.0)
+    col1, col2 = st.columns(2)
 
-# ===============================
-# PREDIKSI
-# ===============================
-st.subheader("🔮 Prediksi Kategori Produk")
+    with col1:
+        rprice = st.number_input("RPrice", 0.0, key="c_rprice")
+        rqty = st.number_input("RQty", 0, key="c_rqty")
+        mprice = st.number_input("MPrice", 0.0, key="c_mprice")
 
-if st.button("Prediksi"):
-    input_data = np.array([[RPrice, RQty, MPrice, MQty, LineTotal, TransTotal]])
-    pred = model.predict(input_data)
-    category = le.inverse_transform(pred)
+    with col2:
+        mqty = st.number_input("MQty", 0, key="c_mqty")
+        linetotal = st.number_input("Line Total", 0.0, key="c_linetotal")
+        transtotal = st.number_input("Transaction Total", 0.0, key="c_transtotal")
 
-    st.success(f"Kategori Produk: **{category[0]}**")
+    if st.button("Prediksi Kategori"):
+        data = np.array([[rprice, rqty, mprice, mqty, linetotal, transtotal]])
+        pred = clf_model.predict(data)
+        category = le.inverse_transform(pred)
+        st.success(f"Kategori Produk: **{category[0]}**")
 
-# ===============================
-# VISUALISASI MODEL
-# ===============================
-st.subheader("📊 Evaluasi & Visualisasi Model")
+    st.markdown("---")
+    st.subheader("📊 Evaluasi Model Klasifikasi")
 
-# ===== Confusion Matrix =====
-st.markdown("### 🔹 Confusion Matrix")
+    y_pred = clf_model.predict(X)
+    acc = accuracy_score(y, y_pred)
 
-y_pred = model.predict(X)
-cm = confusion_matrix(y, y_pred)
+    st.metric("Accuracy", f"{acc:.2f}")
 
-fig_cm, ax_cm = plt.subplots(figsize=(6,5))
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-            xticklabels=le.classes_,
-            yticklabels=le.classes_,
-            ax=ax_cm)
-ax_cm.set_xlabel("Predicted")
-ax_cm.set_ylabel("Actual")
-ax_cm.set_title("Confusion Matrix")
+    cm = confusion_matrix(y, y_pred)
+    fig_cm, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=le.classes_,
+        yticklabels=le.classes_,
+        ax=ax
+    )
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.set_title("Confusion Matrix")
+    st.pyplot(fig_cm)
 
-st.pyplot(fig_cm)
+# ======================================================
+# TAB 2 — REGRESI
+# ======================================================
+with tab2:
+    st.subheader("📈 Prediksi Total Transaksi (Regresi)")
+    st.write("Target Regresi: **TransTotal**")
+    st.write("Algoritma: **Random Forest Regressor**")
 
-# ===== Accuracy =====
-acc = accuracy_score(y, y_pred)
-st.markdown(f"**Akurasi Model:** `{acc:.2f}`")
+    col3, col4 = st.columns(2)
 
-# ===== Feature Importance =====
-st.markdown("### 🔹 Feature Importance")
+    with col3:
+        rprice_r = st.number_input("RPrice", 0.0, key="r_rprice")
+        rqty_r = st.number_input("RQty", 0, key="r_rqty")
+        mprice_r = st.number_input("MPrice", 0.0, key="r_mprice")
 
-importance = model.feature_importances_
-feat_imp = pd.DataFrame({
-    'Feature': features,
-    'Importance': importance
-}).sort_values(by='Importance', ascending=True)
+    with col4:
+        mqty_r = st.number_input("MQty", 0, key="r_mqty")
+        linetotal_r = st.number_input("Line Total", 0.0, key="r_linetotal")
 
-fig_fi, ax_fi = plt.subplots(figsize=(6,4))
-ax_fi.barh(feat_imp['Feature'], feat_imp['Importance'])
-ax_fi.set_title("Feature Importance - Random Forest")
+    if st.button("Prediksi Total Transaksi"):
+        reg_input = np.array([[rprice_r, rqty_r, mprice_r, mqty_r, linetotal_r]])
+        pred_total = reg_model.predict(reg_input)
+        st.success(f"Prediksi Total Transaksi: **{pred_total[0]:,.2f}**")
 
-st.pyplot(fig_fi)
+    st.markdown("---")
+    st.info(
+        "Regresi digunakan untuk memprediksi nilai numerik total transaksi, "
+        "sementara klasifikasi digunakan untuk menentukan kategori produk."
+    )
 
 # ===============================
 # FOOTER
 # ===============================
 st.markdown("---")
-st.caption("Data Mining | Classification | Ensemble Method (Random Forest)")
+st.caption("Data Mining | Classification & Regression | Streamlit Cloud")
